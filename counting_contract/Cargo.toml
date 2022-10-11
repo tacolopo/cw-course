@@ -9,3 +9,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 cosmwasm-std = "1.0.0"
 serde = { version = "1.0.145", features = ["derive"] }
+
+[dev-dependencies]
+cw-multi-test = "0.15.1"
