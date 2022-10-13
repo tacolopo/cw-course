@@ -4,6 +4,8 @@ use cosmwasm_std::{
     StdResult,
 };
 
+use state::COUNTER;
+
 mod contract;
 pub mod msg;
 mod state;
@@ -19,7 +21,10 @@ pub fn instantiate(
 }
 
 #[entry_point]
-pub fn execute(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> StdResult<Response> {
+pub fn execute(deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> StdResult<Response> {
+    let value = COUNTER.load(deps.storage)?;
+    let updated_value = value + 1;
+    COUNTER.save(deps.storage, &updated_value)?;
     Ok(Response::new())
 }
 
