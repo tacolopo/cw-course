@@ -16,3 +16,17 @@ pub mod query {
         Ok(ValueResp { value })
     }
 }
+
+pub mod exec {
+    use cosmwasm_std::{StdResult, Response, DepsMut, MessageInfo};
+
+    use crate::state::COUNTER;
+
+    pub fn poke(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
+        let value = COUNTER.load(deps.storage)? + 1;
+        COUNTER.save(deps.storage, &value)?;
+
+        let resp = Response::new().add_attribute("action", "poke").add_attribute("sender", info.sender).add_attribute("counter", value.to_string());
+        Ok(resp)
+    }
+}
