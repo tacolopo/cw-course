@@ -1,10 +1,8 @@
 use crate::msg::QueryMsg;
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
-    StdResult,
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
-use msg::ExecuteMsg;
-
+use msg::{ExecuteMsg, InstantiateMsg};
 
 mod contract;
 pub mod msg;
@@ -15,17 +13,23 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: Empty,
+    msg: InstantiateMsg,
 ) -> Result<Response, StdError> {
-    contract::instantiate(deps)
+    contract::instantiate(deps, msg.counter, msg.minimal_donation)
 }
 
 #[entry_point]
-pub fn execute(deps: DepsMut, _env: Env, info: MessageInfo, msg: ExecuteMsg) -> StdResult<Response> {
+pub fn execute(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+) -> StdResult<Response> {
     use msg::ExecuteMsg::*;
 
     match msg {
-        Poke {} => contract::exec::poke(deps, info),
+        Donate {} => contract::execute::donate(deps, info),
+        Reset { counter: _ } => contract::execute::reset(deps),
     }
 }
 
@@ -40,8 +44,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 //cfg compiles code only if predicate passed is true. "our test would not be unnecessarily sitting in the final binary"
 #[cfg(test)]
 mod test {
-    use crate::msg::{QueryMsg, ValueResp, ExecuteMsg};
-    use cosmwasm_std::{Addr, Empty};
+    use crate::msg::{ExecuteMsg, QueryMsg, ValueResp, InstantiateMsg};
+    use cosmwasm_std::{Addr, Empty, coin, coins};
     use cw_multi_test::{App, Executor};
     use cw_multi_test::{Contract, ContractWrapper};
 
@@ -63,7 +67,10 @@ mod test {
             .instantiate_contract(
                 contract_id,
                 Addr::unchecked("sender"),
-                &Empty {},
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom"),
+                },
                 &[],
                 "Counting Contract",
                 None,
@@ -80,7 +87,7 @@ mod test {
     }
 
     #[test]
-    fn poke() {
+    fn donate() {
         //default app instance "it is the blockchain simulator"
         let mut app = App::default();
         let sender = Addr::unchecked("sender");
@@ -91,15 +98,52 @@ mod test {
             .instantiate_contract(
                 contract_id,
                 sender.clone(),
-                &Empty {},
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom")
+                },
                 &[],
                 "Counting Contract",
                 None,
             )
             .unwrap();
 
-        app.execute_contract(sender, contract_addr.clone(), &ExecuteMsg::Poke {  }, &[]).unwrap();
+        app.execute_contract(sender, contract_addr.clone(), &ExecuteMsg::Donate {}, &[])
+            .unwrap();
         //wrap converts app object to a temporary QuerierWrapper, allowing us to query the chain
+        let resp: ValueResp = app
+            .wrap()
+            .query_wasm_smart(contract_addr, &QueryMsg::Value {})
+            .unwrap();
+
+        assert_eq!(resp, ValueResp { value: 0 });
+    }
+    #[test]
+    fn donate_with_funds() {
+        let sender = Addr::unchecked("sender");
+        let mut app = App::new( |router, _api, storage| {
+            router
+                .bank
+                .init_balance(storage, &sender, coins(10, "atom"))
+                .unwrap()
+        });
+        let contract_id = app.store_code(counting_contract());
+        let contract_addr = app
+            .instantiate_contract(
+                contract_id,
+                sender.clone(),
+                &InstantiateMsg {
+                    counter: 0,
+                    minimal_donation: coin(10, "atom")
+                },
+                &[],
+                "Counting Contract",
+                None,
+            )
+            .unwrap();
+
+        app.execute_contract(sender, contract_addr.clone(), &ExecuteMsg::Donate {}, &coins(10, "atom"))
+            .unwrap();
         let resp: ValueResp = app
             .wrap()
             .query_wasm_smart(contract_addr, &QueryMsg::Value {})
