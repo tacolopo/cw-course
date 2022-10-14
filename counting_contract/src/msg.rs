@@ -12,7 +12,8 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Donate {},
-    Reset { counter: u64 },
+    Reset {},
+    Withdraw {},
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
