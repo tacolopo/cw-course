@@ -2,11 +2,13 @@ use crate::msg::QueryMsg;
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
+use error::ContractError;
 use msg::{ExecuteMsg, InstantiateMsg};
 
 mod contract;
 pub mod msg;
 mod state;
+mod error;
 
 #[entry_point]
 pub fn instantiate(
@@ -24,12 +26,12 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> StdResult<Response> {
+) -> Result<Response, ContractError> {
     use msg::ExecuteMsg::*;
 
     match msg {
-        Donate {} => contract::execute::donate(deps, info),
-        Reset {} => contract::execute::reset(deps),
+        Donate {} => contract::execute::donate(deps, info).map_err(ContractError::Std),
+        Reset {} => contract::execute::reset(deps).map_err(ContractError::Std),
         Withdraw {} => contract::execute::withdraw(deps, info, env),
     }
 }
@@ -45,6 +47,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 //cfg compiles code only if predicate passed is true. "our test would not be unnecessarily sitting in the final binary"
 #[cfg(test)]
 mod test {
+    use crate::error::ContractError;
     use crate::msg::{ExecuteMsg, QueryMsg, ValueResp, InstantiateMsg};
     use cosmwasm_std::{Addr, Empty, coin, coins};
     use cw_multi_test::{App, Executor};
@@ -196,6 +199,35 @@ mod test {
         assert_eq!(
             app.wrap().query_all_balances(owner).unwrap(),
             coins(10, "atom")
+        );
+    }
+    #[test]
+    fn unauthorized_withdraw() {
+        let owner = Addr::unchecked("owner");
+        let member = Addr::unchecked("member");
+        let mut app = App::default();
+        let contract_id = app.store_code(counting_contract());
+        let contract_addr = app
+        .instantiate_contract(
+            contract_id,
+            owner.clone(),
+            &InstantiateMsg {
+                counter: 0,
+                minimal_donation: coin(10, "atom")
+            },
+            &[],
+            "Counting Contract",
+            None,
+        )
+        .unwrap();
+
+        let err = app
+        .execute_contract(member, contract_addr, &ExecuteMsg::Withdraw {  }, &[])
+        .unwrap_err();
+
+        assert_eq!(
+            ContractError::Unauthorized { owner: owner.into() },
+            err.downcast().unwrap()
         );
     }
 }

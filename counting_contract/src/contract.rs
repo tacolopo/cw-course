@@ -10,9 +10,9 @@ pub fn instantiate(deps: DepsMut, info: MessageInfo, counter: u64, minimal_donat
 }
 
 pub mod execute {
-    use cosmwasm_std::{StdResult, Response, DepsMut, MessageInfo, Env, StdError, BankMsg};
+    use cosmwasm_std::{StdResult, Response, DepsMut, MessageInfo, Env, BankMsg};
 
-    use crate::state::{COUNTER, MINIMAL_DONATION, OWNER};
+    use crate::{state::{COUNTER, MINIMAL_DONATION, OWNER}, error::ContractError};
 
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
         let mut counter = COUNTER.load(deps.storage)?;
@@ -39,10 +39,10 @@ pub mod execute {
         .add_attribute("counter", 0.to_string());
         Ok(resp)
     }
-    pub fn withdraw(deps: DepsMut, info: MessageInfo, env: Env) -> StdResult<Response> {
+    pub fn withdraw(deps: DepsMut, info: MessageInfo, env: Env) -> Result<Response, ContractError> {
         let owner = OWNER.load(deps.storage)?;
         if info.sender != owner {
-            return Err(StdError::generic_err("Unauthorized"));
+            return Err(ContractError::Unauthorized { owner: owner.to_string() });
         }
         //queries contract state and token value
         let balance = deps.querier.query_all_balances(&env.contract.address)?;

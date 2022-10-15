@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 cosmwasm-std = "1.0.0"
 cw-storage-plus = "0.15.1"
 serde = { version = "1.0.145", features = ["derive"] }
+thiserror = "1.0.37"
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"
