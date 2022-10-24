@@ -6,9 +6,14 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+library = []
+tests = ["library", "cw-multi-test"]
+
 [dependencies]
 cosmwasm-schema = "1.1.4"
 cosmwasm-std = "1.0.0"
+cw-multi-test = { version = "0.15.1", optional = true }
 cw-storage-plus = "0.15.1"
 schemars = "0.8.11"
 serde = { version = "1.0.145", features = ["derive"] }

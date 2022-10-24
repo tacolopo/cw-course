@@ -1,7 +1,11 @@
 use crate::msg::QueryMsg;
 use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
+
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+
 use error::ContractError;
 use msg::{ExecuteMsg, InstantiateMsg};
 
@@ -9,10 +13,11 @@ mod contract;
 pub mod msg;
 mod state;
 pub mod error;
-#[cfg(test)]
+#[cfg(any(test, feature = "tests"))]
 pub mod multitest;
 
-#[entry_point]
+//hides entry point when library feature is enabled
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -22,7 +27,7 @@ pub fn instantiate(
     contract::instantiate(deps, info, msg.counter, msg.minimal_donation)
 }
 
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -38,7 +43,7 @@ pub fn execute(
     }
 }
 
-#[entry_point]
+#[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     use msg::QueryMsg::*;
     match msg {
