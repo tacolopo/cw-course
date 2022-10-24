@@ -1,6 +1,7 @@
 use cosmwasm_std::{Empty, Addr, Coin, coins};
 use cw_multi_test::{App, ContractWrapper, Contract};
 use crate::{execute, instantiate, query, multitest::CountingContract};
+use counting_contract_0_1_0::multitest::CountingContract as Counting_Contract_0_1_0;
 
 
 fn counting_contract() -> Box<dyn Contract<Empty>> {
@@ -113,5 +114,19 @@ fn withdraw() {
     );
     assert_eq!(app.wrap().query_all_balances(sender1).unwrap(), vec![]);
     assert_eq!(app.wrap().query_all_balances(sender2).unwrap(), vec![]);
+}
+#[test]
+fn migration() {
+    let owner = Addr::unchecked("owner");
+    let admin = Addr::unchecked("admin");
+    let sender = Addr::unchecked("sender");
 
+    let mut app = App::new( |router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &sender1, coins(10, "atom"))
+            .unwrap();
+    });
+
+    let old_code_id = Counting_Contract_0_1_0::store_code(&mut app);
 }

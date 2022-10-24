@@ -1,6 +1,6 @@
 use crate::msg::QueryMsg;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+    to_binary, Empty, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
 #[cfg(not(feature = "library"))]
@@ -24,7 +24,12 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, StdError> {
-    contract::instantiate(deps, info, msg.counter, msg.minimal_donation)
+    contract::instantiate(deps, info, msg)
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
+    contract::migrate(deps)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -38,7 +43,6 @@ pub fn execute(
 
     match msg {
         Donate {} => contract::execute::donate(deps, info).map_err(ContractError::Std),
-        Reset {} => contract::execute::reset(deps).map_err(ContractError::Std),
         Withdraw {} => contract::execute::withdraw(deps, info, env),
     }
 }

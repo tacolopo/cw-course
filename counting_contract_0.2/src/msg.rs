@@ -11,7 +11,6 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Donate {},
-    Reset {},
     Withdraw {},
 }
 

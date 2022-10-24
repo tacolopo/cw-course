@@ -1,11 +1,28 @@
-use crate::state::{STATE, OWNER};
-// use crate::
-use cosmwasm_std::{DepsMut, Response, StdResult, Coin, MessageInfo};
-use crate::state::{State, OWNER, STATE};
+use crate::state::{State, STATE, OWNER};
+use crate::msg::{InstantiateMsg};
+use cosmwasm_std::{Coin, DepsMut, Response, StdResult, MessageInfo};
+use cw_storage_plus::Item;
 
-pub fn instantiate(deps: DepsMut, info: MessageInfo, counter: u64, minimal_donation: Coin) -> StdResult<Response> {
-    STATE.save(deps.storage, &State {count: 0, minimal_donation: msg.minimal_donation,});
+pub fn instantiate(deps: DepsMut, info: MessageInfo, msg: InstantiateMsg) -> StdResult<Response> {
+    STATE.save(deps.storage, &State {counter: 0, minimal_donation: msg.minimal_donation})?;
     OWNER.save(deps.storage, &info.sender)?;
+    Ok(Response::new())
+}
+
+pub fn migrate(deps: DepsMut) -> StdResult<Response> {
+    pub const COUNTER: Item<u64> = Item::new("counter");
+    pub const MINIMAL_DONATION: Item<Coin> = Item::new("minimal_donation");
+
+    let counter = COUNTER.load(deps.storage)?;
+    let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
+
+    STATE.save(
+        deps.storage,
+        &State {
+            counter,
+            minimal_donation
+        }
+    )?;
     Ok(Response::new())
 }
 
@@ -16,27 +33,18 @@ pub mod execute {
 
     pub fn donate(deps: DepsMut, info: MessageInfo) -> StdResult<Response> {
         let mut state = STATE.load(deps.storage)?;
-        let minimal_donation = MINIMAL_DONATION.load(deps.storage)?;
 
         if info.funds.iter().any(|coin| {
             coin.denom == state.minimal_donation.denom && coin.amount >= state.minimal_donation.amount
         }) {
             state.counter += 1;
-            STATE.save(deps.storage, &counter)?;
+            STATE.save(deps.storage, &state)?;
         }
 
         let resp = Response::new()
         .add_attribute("action", "donate")
         .add_attribute("sender", info.sender)
         .add_attribute("counter", state.counter.to_string());
-        Ok(resp)
-    }
-    pub fn reset(deps: DepsMut) -> StdResult<Response> {
-        COUNTER.save(deps.storage, &0)?;
-
-        let resp = Response::new()
-        .add_attribute("action", "reset_counter")
-        .add_attribute("counter", 0.to_string());
         Ok(resp)
     }
     pub fn withdraw(deps: DepsMut, info: MessageInfo, env: Env) -> Result<Response, ContractError> {
