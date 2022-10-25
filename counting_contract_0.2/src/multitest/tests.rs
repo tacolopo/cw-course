@@ -154,6 +154,6 @@ fn migration() {
     assert_eq!(state, State {
         counter: 1,
         minimal_donation: Coin::new(10, "atom")
-    });
+    });    
     
 }
