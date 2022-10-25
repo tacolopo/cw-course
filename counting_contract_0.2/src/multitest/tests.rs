@@ -1,8 +1,8 @@
 use cosmwasm_std::{Empty, Addr, Coin, coins};
 use cw_multi_test::{App, ContractWrapper, Contract};
 use crate::{execute, instantiate, query, multitest::CountingContract};
+use crate::state::{State, STATE};
 use counting_contract_0_1_0::multitest::CountingContract as Counting_Contract_0_1_0;
-
 
 fn counting_contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(execute, instantiate, query);
@@ -124,9 +124,36 @@ fn migration() {
     let mut app = App::new( |router, _api, storage| {
         router
             .bank
-            .init_balance(storage, &sender1, coins(10, "atom"))
+            .init_balance(storage, &sender, coins(10, "atom"))
             .unwrap();
     });
 
     let old_code_id = Counting_Contract_0_1_0::store_code(&mut app);
+    let new_code_id = CountingContract::store_code(&mut app);
+
+    let contract = Counting_Contract_0_1_0::instantiate(
+        &mut app, 
+        old_code_id, 
+        &owner, 
+        Some(&admin),
+        "Counting Contract",
+        Coin::new(10, "atom")
+        )
+    .unwrap();
+
+    contract
+        .donate(&mut app, &sender, &coins(10, "atom"))
+        .unwrap();
+    
+    let contract = CountingContract::migrate(&mut app, &admin, contract.addr(), new_code_id).unwrap();
+    
+    let resp = contract.query_value(&app).unwrap();
+    assert_eq!(resp.value, 1);
+
+    let state = STATE.query(&app.wrap(), contract.addr().clone()).unwrap();
+    assert_eq!(state, State {
+        counter: 1,
+        minimal_donation: Coin::new(10, "atom")
+    });
+    
 }

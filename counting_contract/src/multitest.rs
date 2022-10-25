@@ -1,6 +1,7 @@
 use cosmwasm_std::{Addr, Coin, StdResult};
 use crate::{InstantiateMsg, msg::{ValueResp, QueryMsg, ExecuteMsg}, error::ContractError};
-use cw_multi_test::{App, Executor};
+use crate::{execute, instantiate, query};
+use cw_multi_test::{App, Executor, ContractWrapper};
 #[cfg(test)]
 mod tests;
 pub struct CountingContract(Addr);
@@ -8,6 +9,10 @@ pub struct CountingContract(Addr);
 impl CountingContract {
     pub fn addr(&self) -> &Addr {
         &self.0
+    }
+    pub fn store_code(app: &mut App) -> u64 {
+        let contract = ContractWrapper::new(execute, instantiate, query);
+        app.store_code(Box::new(contract))
     }
     #[track_caller]
     pub fn instantiate(
